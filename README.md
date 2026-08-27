@@ -3,19 +3,22 @@
 Rotation- and scale-invariant shape matching for machine vision — **find a part at any
 angle**, under changing illumination, with pieces of it missing.
 
-[![PyPI](https://img.shields.io/pypi/v/geofit.svg)](https://pypi.org/project/geofit/)
-[![Python](https://img.shields.io/pypi/pyversions/geofit.svg)](https://pypi.org/project/geofit/)
+[![PyPI](https://img.shields.io/pypi/v/geofit.svg?cacheSeconds=3600)](https://pypi.org/project/geofit/)
+[![Python](https://img.shields.io/pypi/pyversions/geofit.svg?cacheSeconds=3600)](https://pypi.org/project/geofit/)
 [![Platform](https://img.shields.io/badge/platform-linux%20%7C%20macOS%20%7C%20Windows-lightgrey.svg)](https://pypi.org/project/geofit/#files)
 [![License](https://img.shields.io/badge/license-Proprietary-red.svg)](#license)
 
-The model is a set of **edge points plus unit gradient direction vectors**, and similarity
-is the mean dot product of those directions. Gradient *magnitude* is thrown away, which is
-what makes the score indifferent to illumination and contrast. It is a sum, so an occluded
-point contributes zero instead of breaking the match. Rotation is applied to the *model*,
-not the image.
+Give it a picture of the part you are looking for. It tells you where that part is in
+the next image, how far it is rotated, and how sure it is — to a tenth of a pixel and a
+tenth of a degree, for every instance in the frame, in milliseconds.
 
-**A C++ core with a numpy-only Python API.** No OpenCV, no PyTorch, nothing to configure.
-A 2592×1944 image searched over the full 360° takes about 20 ms.
+It keeps working when the lighting drifts, when the part is darker or lighter than the one
+you taught it, and when something is sitting on top of it. Those are the conditions that
+break a plain correlation template match, and they are the everyday conditions on a line.
+
+**A C++ core behind a Python API that needs only numpy.** No OpenCV, no PyTorch, no model
+to train, nothing to configure. A 2592x1944 image searched over the full 360 degrees takes
+about 20 ms.
 
 ```bash
 pip install geofit
@@ -26,9 +29,9 @@ geofit demo --save result.png     # runs on a bundled sample, nothing else neede
 
 ## What it looks like
 
-Seven screwdriver bits on a dark background, every one at a different angle. Red dots are
-the model's edge points mapped into the pose that was found; the green box is the template
-outline and the blue line points along the template's 0° axis.
+Seven screwdriver bits on a dark background, every one at a different angle. The red
+outline is the model drawn back onto the pose that was found, the green box is the template
+footprint, and the blue line shows which way it is facing.
 
 ![driver bits](docs/bits.png)
 
@@ -239,9 +242,11 @@ ARM64 — and the x86 path is chosen **at runtime** by CPUID. The same wheel the
 CPUs without AVX2, falling back to the portable path instead of crashing. `geofit info`
 reports which one it picked.
 
-Inside the top-level search, a partial score that cannot reach `min_score` even if every
-remaining point matched perfectly is abandoned immediately. On real images this removes
-3–8× of the work; `geofit demo` prints how much it saved on the run you just did.
+The search spends its time only where a match is still possible, which on real images is a
+small fraction of the frame. `geofit demo` reports how much of the work that saved on the
+run you just did — typically three- to eightfold. `greediness` controls how aggressively it
+does this: leave it at the default, raise it when you need speed, drop it to 0 when you
+would rather not miss a weak match.
 
 ---
 
